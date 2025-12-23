@@ -1,0 +1,6 @@
+__pycache__/
+.git/
+.venv/
+node_modules/
+*.log
+*.db
