@@ -10,12 +10,34 @@ services:
       - mysql-data:/var/lib/mysql
 
   kafka:
-    image: confluentinc/cp-kafka
+    image: docker pull confluentinc/cp-kafka:8.0.3
+    container_name: kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_KRAFT_MODE: "true"
+
+      CLUSTER_ID: "kafka-id-101"
+      KAFKA_NODE_ID: 1
+
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+      KAFKA_LISTNERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER:0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS_NAMES: CONTROLLER
+
+      KAFKA_LOG_DIRS: /tmp/kraft-combined-logs
+
+    volumes:
+      - kafka_kraft:/var/lib/kafka/data
 
 volumes:
   mysql-data:
+  kafka_kraft:
 
-# what is need is
+# what I need is
 # debezium mysql alpine
 # debezium postgres alpine
 # kafka alpine
