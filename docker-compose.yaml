@@ -1,0 +1,23 @@
+services:
+  mysql:
+    image: alpine/mysql
+    container_name: mysql-db
+    ports:
+      - 8888:3306
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+    volumes:
+      - mysql-data:/var/lib/mysql
+
+  kafka:
+    image: confluentinc/cp-kafka
+
+volumes:
+  mysql-data:
+
+# what is need is
+# debezium mysql alpine
+# debezium postgres alpine
+# kafka alpine
+# python apline
+# develop network
