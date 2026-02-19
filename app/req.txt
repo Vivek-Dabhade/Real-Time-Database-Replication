@@ -1,0 +1,7 @@
+python-dotenv-vault
+numpy
+opendatasets
+pandas
+psycopg2
+sqlalchemy
+
