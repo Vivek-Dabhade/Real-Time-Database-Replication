@@ -8,7 +8,7 @@ services:
       - "3306:3306"
     environment:
       MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: myapp
+      MYSQL_DATABASE: mysql-db
     volumes:
       - mysql-data:/var/lib/mysql
 
@@ -32,12 +32,22 @@ services:
     volumes:
       - kafka_kraft:/var/lib/kafka/data
 
+  postgres:
+    image: postgres
+    container_name: postgresql-db
+    environment:
+      POSTGRES_USER: $(POSTGRES_USERNAME)
+      POSTGRES_PASSWORD: $(POSTGRES_PASSWORD)
+      POSTGRES_DB: "crypto" #database name in db
+    ports:
+      - 5432:5432
+
 volumes:
   mysql-data:
   kafka_kraft:
 
 network:
-  backend: 
+  backend:
 
 # what I need is
 # debezium mysql alpine
