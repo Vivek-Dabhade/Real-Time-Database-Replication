@@ -1,81 +1,86 @@
 version: "3.8"
 
 services:
-  mysql:
-    image: mysql:8.0
-    container_name: mysql-db
+  mariadb:
+    image: mariadb:11.8-noble
+    container_name: maria_db
     ports:
       - "3306:3306"
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: mysql-db
+      MARIADB_ROOT_PASSWORD: root
+      MARIADB_DATABASE: mariadb_db
     volumes:
-      - mysql-data:/var/lib/mysql
+      - mariadb-data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 5s
+      timeout: 5s
       retries: 5
+      start_period: 60s
     networks:
       - backend
 
-  kafka:
-    image: confluentinc/cp-kafka:8.0.3
-    container_name: kafka
-    ports:
-      - "9092:9092"
-    environment:
-      KAFKA_KRAFT_MODE: "true"
-      CLUSTER_ID: "kafka-id-101"
-      KAFKA_NODE_ID: 1
-      KAFKA_PROCESS_ROLES: broker,controller
-      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
-      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
-      KAFKA_LOG_DIRS: /var/lib/kafka/data
-    volumes:
-      - kafka_kraft:/var/lib/kafka/data
-    networks:
-      - backend
+  # postgres:
+  #   image: postgres
+  #   container_name: postgresql-db
+  #   environment:
+  #     POSTGRES_USER: "root" #${POSTGRES_USERNAME}
+  #     POSTGRES_PASSWORD: "root" #${POSTGRES_PASSWORD}
+  #     POSTGRES_DB: "crypto" #database name in db
+  #   ports:
+  #     - 5432:5432
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U root"]
+  #     interval: 5s
+  #     retries: 5
+  #   networks:
+  #     - backend
 
-  postgres:
-    image: postgres
-    container_name: postgresql-db
-    environment:
-      POSTGRES_USER: ${POSTGRES_USERNAME}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: "crypto" #database name in db
-    ports:
-      - 5432:5432
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U root"]
-      interval: 5s
-      retries: 5
-    networks:
-      - backend
+  # kafka:
+  #   image: confluentinc/cp-kafka:8.0.3
+  #   container_name: kafka
+  #   ports:
+  #     - "9092:9092"
+  #   environment:
+  #     KAFKA_KRAFT_MODE: "true"
+  #     CLUSTER_ID: "kafka-id-101"
+  #     KAFKA_NODE_ID: 1
+  #     KAFKA_PROCESS_ROLES: broker,controller
+  #     KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+  #     KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+  #     KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+  #     KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+  #     KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+  #     KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+  #     KAFKA_LOG_DIRS: /var/lib/kafka/data
+  #   volumes:
+  #     - kafka_kraft:/var/lib/kafka/data
+  #   networks:
+  #     - backend
 
   schema:
     build: ./app
     command: python3 schema.py
+    restart: "no"
     depends_on:
-      mysql:
+      mariadb:
         condition: service_healthy
-      postgres:
-        condition: service_healthy
+      # postgres:
+      # condition: service_healthy
     networks:
       - backend
   ingest:
     build: ./app
     command: python3 ingest.py
     depends_on:
-      mysql:
+      mariadb:
         condition: service_healthy
+      schema:
+        condition: service_completed_successfully
     networks:
       - backend
 volumes:
-  mysql-data:
+  mariadb-data:
   kafka_kraft:
 
 networks:

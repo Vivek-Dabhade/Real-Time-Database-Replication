@@ -1,17 +1,21 @@
-FROM python:3.12.4-alpine3.20
+FROM python:3.15-rc-slim-bookworm
 
-WORKDIR  /app
+WORKDIR /app
 
-RUN apk add --no-cache \
-    gcc \
-    musl-dev \
-    linux-headers 
 COPY requirements.txt .
+
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    libffi-dev \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN pip install -r requirements.txt
 
 COPY . .
-CMD ["python", "app.py"]
 
+CMD ["python", "app.py"]
 # pip freeze >> req.txt
 # create venv
 # enter in venv 
