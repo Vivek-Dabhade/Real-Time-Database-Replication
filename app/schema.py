@@ -1,20 +1,11 @@
-# hostname = 'localhost'
-# database = 'portgresql-db'
-# username = 'root'
-# password = 'root'
-# port_id  = 5432
-
 import sqlalchemy
 
 pg_engine = sqlalchemy.create_engine(
-    "postgresql+psycopg2://root:root@portgres:5432/crypto", echo=True
+    "postgresql+psycopg2://root:root@postgres:5432/crypto", echo=True
 )
 mariadb_engine = sqlalchemy.create_engine(
     "mysql+pymysql://root:root@mariadb:3306/mariadb_db", echo=True
 )
-
-pg_connection = pg_engine.connect()
-mariadb_connection = mariadb_engine.connect()
 
 metadata = sqlalchemy.MetaData()
 

@@ -31,8 +31,8 @@ services:
     depends_on:
       mariadb:
         condition: service_healthy
-      # postgres:
-      # condition: service_healthy
+      postgres:
+        condition: service_healthy
     networks:
       - backend
   ingest:
@@ -82,25 +82,99 @@ services:
     networks:
       - backend
 
-  # postgres:
-  #   image: postgres
-  #   container_name: postgresql-db
-  #   environment:
-  #     POSTGRES_USER: "root" #${POSTGRES_USERNAME}
-  #     POSTGRES_PASSWORD: "root" #${POSTGRES_PASSWORD}
-  #     POSTGRES_DB: "crypto" #database name in db
-  #   ports:
-  #     - 5432:5432
-  #   healthcheck:
-  #     test: ["CMD-SHELL", "pg_isready -U root"]
-  #     interval: 5s
-  #     retries: 5
-  #   networks:
-  #     - backend
+  debezium:
+    image: debezium/connect:2.7
+    container_name: debezium
+    ports:
+      - "8083:8083"
+    environment:
+      BOOTSTRAP_SERVERS: kafka:29092
+      GROUP_ID: debezium-group
+      CONFIG_STORAGE_TOPIC: debezium_configs
+      OFFSET_STORAGE_TOPIC: debezium_offsets
+      STATUS_STORAGE_TOPIC: debezium_status
+      KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      KEY_CONVERTER_SCHEMAS_ENABLE: "false"
+      VALUE_CONVERTER_SCHEMAS_ENABLE: "false"
+    depends_on:
+      kafka:
+        condition: service_healthy
+      mariadb:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/connectors"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 45s
+    networks:
+      - backend
+
+  debezium-setup:
+    image: curlimages/curl:latest
+    container_name: debezium-setup
+    restart: "no"
+    depends_on:
+      debezium:
+        condition: service_healthy
+    networks:
+      - backend
+    command: >
+      curl -X POST http://debezium:8083/connectors
+      -H "Content-Type: application/json"
+      -d '{
+        "name": "mariadb-connector",
+        "config": {
+          "connector.class": "io.debezium.connector.mysql.MySqlConnector",
+          "database.hostname": "maria_db",
+          "database.port": "3306",
+          "database.user": "root",
+          "database.password": "root",
+          "database.server.id": "1",
+          "topic.prefix": "dbserver1",
+          "database.include.list": "mariadb_db",
+          "table.include.list": "mariadb_db.crypto",
+          "schema.history.internal.kafka.bootstrap.servers": "kafka:29092",
+          "schema.history.internal.kafka.topic": "schema-changes.mariadb"
+        }
+      }'
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: crypto
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U root"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - backend
+
+  consumer:
+    build: ../kafka
+    command: python3 consumer.py
+    restart: on-failure
+    depends_on:
+      debezium:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    networks:
+      - backend
 
 volumes:
   mariadb-data:
   kafka_kraft:
+  postgres-data:
 
 networks:
   backend:
@@ -109,10 +183,3 @@ networks:
       config:
         - subnet: "10.0.0.0/19"
           gateway: "10.0.0.1"
-
-# what I need is
-# debezium mysql alpine
-# debezium postgres alpine
-# kafka alpine
-# python apline
-# develop network
