@@ -1,4 +1,4 @@
-FROM python:3.15-rc-slim-bookworm
+FROM python:3.12-slim-bookworm
 
 WORKDIR /app
 
@@ -15,7 +15,7 @@ RUN pip install -r requirements.txt
 
 COPY . .
 
-CMD ["python", "app.py"]
+CMD ["python"] 
 # pip freeze >> req.txt
 # create venv
 # enter in venv 

@@ -9,6 +9,10 @@ services:
     environment:
       MARIADB_ROOT_PASSWORD: root
       MARIADB_DATABASE: mariadb_db
+    command:
+      - --log-bin=mysql-bin
+      - --binlog-format=ROW
+      - --server-id=1
     volumes:
       - mariadb-data:/var/lib/mysql
     healthcheck:
@@ -19,44 +23,6 @@ services:
       start_period: 60s
     networks:
       - backend
-
-  # postgres:
-  #   image: postgres
-  #   container_name: postgresql-db
-  #   environment:
-  #     POSTGRES_USER: "root" #${POSTGRES_USERNAME}
-  #     POSTGRES_PASSWORD: "root" #${POSTGRES_PASSWORD}
-  #     POSTGRES_DB: "crypto" #database name in db
-  #   ports:
-  #     - 5432:5432
-  #   healthcheck:
-  #     test: ["CMD-SHELL", "pg_isready -U root"]
-  #     interval: 5s
-  #     retries: 5
-  #   networks:
-  #     - backend
-
-  # kafka:
-  #   image: confluentinc/cp-kafka:8.0.3
-  #   container_name: kafka
-  #   ports:
-  #     - "9092:9092"
-  #   environment:
-  #     KAFKA_KRAFT_MODE: "true"
-  #     CLUSTER_ID: "kafka-id-101"
-  #     KAFKA_NODE_ID: 1
-  #     KAFKA_PROCESS_ROLES: broker,controller
-  #     KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
-  #     KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-  #     KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
-  #     KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
-  #     KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-  #     KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
-  #     KAFKA_LOG_DIRS: /var/lib/kafka/data
-  #   volumes:
-  #     - kafka_kraft:/var/lib/kafka/data
-  #   networks:
-  #     - backend
 
   schema:
     build: ./app
@@ -79,6 +45,59 @@ services:
         condition: service_completed_successfully
     networks:
       - backend
+
+  kafka:
+    image: apache/kafka:latest
+    container_name: kafka
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_KRAFT_MODE: "True"
+      CLUSTER_ID: "kafka-id-101"
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_EXTERNAL://0.0.0.0:29092,CONTROLLER://0.0.0.0:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_EXTERNAL://kafka:29092
+      KAFKA_LOG_DIRS: /tmp/kraft-combined-logs
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_EXTERNAL
+    volumes:
+      - kafka_kraft:/var/lib/kafka/data
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "/opt/kafka/bin/kafka-broker-api-versions.sh",
+          "--bootstrap-server",
+          "localhost:9092",
+        ]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    networks:
+      - backend
+
+  # postgres:
+  #   image: postgres
+  #   container_name: postgresql-db
+  #   environment:
+  #     POSTGRES_USER: "root" #${POSTGRES_USERNAME}
+  #     POSTGRES_PASSWORD: "root" #${POSTGRES_PASSWORD}
+  #     POSTGRES_DB: "crypto" #database name in db
+  #   ports:
+  #     - 5432:5432
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U root"]
+  #     interval: 5s
+  #     retries: 5
+  #   networks:
+  #     - backend
+
 volumes:
   mariadb-data:
   kafka_kraft:

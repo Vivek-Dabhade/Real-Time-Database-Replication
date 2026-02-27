@@ -1,7 +1,7 @@
 import time
 
 import requests
-from schema import sql_insert_data
+from schema import mariadb_insert_data
 
 # Binance API endpoint for all tickers (full info for BTCUSDT included)
 url = "https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT"
@@ -18,7 +18,7 @@ for i in range(15):
 
         print(f"Price: {data['lastPrice']}, Quantity: {data['lastQty']}")
 
-        sql_insert_data(price, quantity)
+        mariadb_insert_data(price, quantity)
         time.sleep(2)
 
     except KeyboardInterrupt:

@@ -3,7 +3,7 @@ import json
 from confluent_kafka import Consumer
 
 consumer_config = {
-    "bootstrap.servers": "localhost:9092",
+    "bootstrap.servers": "kafka:9092",
     "group.id": "order-tracker",
     "auto.offset.reset": "earliest",
 }
@@ -26,11 +26,14 @@ try:
         value = msg.value().decode("utf-8")
         order = json.loads(value)
         print(
-            f"📦 Received order: {order['quantity']} x {
-                order['item']} from {order['user']}"
-        )except KeyboardInterrupt:
+            f"📦 Received order: {order['quantity']} x {order['item']} from {
+                order['user']
+            }"
+        )
+except KeyboardInterrupt:
     print("\n🔴 Stopping consumer")
 
 finally:
+    consumer.close()
     consumer.close()
     consumer.close()
