@@ -47,7 +47,7 @@ services:
       - backend
 
   kafka:
-    image: apache/kafka:latest
+    image: apache/kafka:3.8.0
     container_name: kafka
     ports:
       - "9092:9092"
@@ -64,6 +64,8 @@ services:
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_EXTERNAL://kafka:29092
       KAFKA_LOG_DIRS: /tmp/kraft-combined-logs
+      KAFKA_BROKER_HEARTBEAT_INTERVAL_MS: 500
+      KAFKA_BROKER_SESSION_TIMEOUT_MS: 15000
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_EXTERNAL
     volumes:
       - kafka_kraft:/var/lib/kafka/data
@@ -160,7 +162,7 @@ services:
       - backend
 
   consumer:
-    build: ../kafka
+    build: ./app
     command: python3 consumer.py
     restart: on-failure
     depends_on:
